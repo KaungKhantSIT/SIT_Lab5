@@ -73,7 +73,15 @@ def add_product(inventory):
             print("Product name already exists. Please enter a unique name.")
         else:
             break
-    product['Price'] = float(input("Price($): ").strip())
+    while True:
+        try:
+            product['Price'] = round(float(input("Price($): ").strip()),2)
+            if product['Price'] > 0:
+                break
+            else:
+                print("Please enter a price above $0")
+        except ValueError:
+            print("Please enter a valid number.")
     while True:
         product['Stock'] = input("Stock Quantity: ").strip()
         if validate_qty(product['Stock']):
