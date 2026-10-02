@@ -1,3 +1,6 @@
+import json
+
+
 #Input prompt, input validation, and return valid integer/"quit" signal
 def get_valid_input():
     order = ""
@@ -38,19 +41,20 @@ def generate_report(total_units, failed_attempts):
 Number of Failed/Rejected Entries: {failed_attempts}"
     return report
 
-#Load inventory from file
+#Load inventory from json file
 def load_inventory(filename):
     try:
         with open(filename, 'r') as file:
-            inv = file.read().splitlines()
+            inv = json.load(file)
+    #Empty list if file not found
     except FileNotFoundError:
         inv = []
     return inv
 
-#Save inventory to file
-def save_inventory(filename,orders):
-    with open(filename, 'a') as file:
-        file.write('\n' + '\n'.join(orders))
+#Save inventory to json file
+def save_inventory(filename, orders):
+    with open(filename, 'w') as file:
+        json.dump(orders, file, indent=len(orders[0]))
     print(f"\nOrder(s) successfully saved to {filename}.")
 
 #Show existing inventory
@@ -106,4 +110,4 @@ def auditor():
         save_inventory("inventory.txt", orders)  # Save inventory to file
 
 #Run main program
-auditor()
+#auditor()
