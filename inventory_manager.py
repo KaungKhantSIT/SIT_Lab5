@@ -1,6 +1,5 @@
 import json
 
-
 #Input prompt, input validation, and return valid integer/"quit" signal
 def get_valid_input():
     order = ""
@@ -23,29 +22,13 @@ def get_valid_input():
         print("Please enter a valid number.")
         return None
 
-#Process order and add to session cart 
-def process_orders(cart, order):
-    print(f"\nNew Order Added:\n{order}\n")
-    cart.append(order)
-    return cart
-
-#Takes delivery amt & returns tax
-def calculate_tax(amount):
-    tax_rate = 0.1  # 10% tax rate
-    taxed_total = amount * tax_rate
-    return taxed_total
-
-#Generate report of total units processed & failed entries
-def generate_report(total_units, failed_attempts):
-    report = f"Total Units Processed: {total_units}\n\
-Number of Failed/Rejected Entries: {failed_attempts}"
-    return report
-
 #Load inventory from json file
 def load_inventory(filename):
     try:
         with open(filename, 'r') as file:
             inv = json.load(file)
+        print(f"{filename} found.")
+        print("Inventory loaded successfully.\n")
     #Empty list if file not found
     except FileNotFoundError:
         inv = []
@@ -53,61 +36,76 @@ def load_inventory(filename):
 
 #Save inventory to json file
 def save_inventory(filename, orders):
+    print("\nSaving inventory...")
     with open(filename, 'w') as file:
-        json.dump(orders, file, indent=len(orders[0]))
-    print(f"\nOrder(s) successfully saved to {filename}.")
+        json.dump(orders, file, indent=2)
+    print(f"Inventory saved successfully to {filename}.")
 
 #Show existing inventory
-def show_inventory(inventory):
-    print("Current Orders:\n")
+def display_all(inventory):
+    print("\nCurrent Inventory")
+    print("-------------------------------------------")
     for order in inventory:
-        print(order)
-    print()
+        print(f"ID:{order['ID']}|Name:{order['Name']}|Price:${order['Price']:.2f}|Stock:{order['Stock']}")
+    print("-------------------------------------------\n")
 
-#Check total stock of product
-def product_total(inventory, product):
-    total = 0
+#Add new product to inventory
+def add_product(cart, order):
+    print(f"\nNew Product Added:\n{order}\n")
+    cart.append(order)
+    return cart
+
+#Search for product in inventory
+def search_product(inventory, product):
     for order in inventory:
-        name = order.split(',')[1].strip()
-        qty = int(order.split(',')[2].strip())
-        if name.lower() == product.lower():
-            total += qty
-    return total
+        if order['Name'].lower() == product.lower():
+            return order
+    return None
 
 #Alert if total stock exceeds 500 units
-def inventory_cap(inventory, product, qty):
-    total = product_total(inventory, product)
-    total += qty
-    if total > 500:  
-        return True
-    return False
+def inventory_cap(inventory, product, qty, cap=500):
+    pass
 
-#Auditor main program function
-def auditor():
-    file = "inventory.txt"
-    total = 0
-    failed = 0
-    orders = []
-    inventory = load_inventory(file)  # Load inventory from file
-    show_inventory(inventory)  # Display current inventory
-    index = int(inventory[-1].split(',')[0]) if inventory else 1001  # Get the last index from inventory or set to 1001 if empty
+#print menu options
+def menu_page(menu):
+    print("---------MENU---------")
+    for i, option in enumerate(menu.keys(), start=1):
+        print(f"{i}. {option}")
+    print("----------------------\n")
     while True:
-        user_input = get_valid_input()
-        if user_input == "quit":
-            break
-        elif user_input is None:
-            failed += 1
+        option = input(f"Enter option (1-{len(menu)}): ").strip()
+        if option.isdigit() and 1 <= int(option) <= len(menu):
+            return list(menu.keys())[int(option) - 1]
         else:
-            index += 1
-            product, qty = user_input
-            order = f"{index}, {product}, {qty}"
-            #print(inventory_cap(inventory, product))
-            if inventory_cap(inventory, product, qty):
-                print(f"\nAlert: Total stock of {product} exceeding 500 units.")
-                break
-            process_orders(orders, order)
-    if len(orders) > 0:
-        save_inventory("inventory.txt", orders)  # Save inventory to file
+            print("Invalid option. Please select a valid option.")
 
+#Manager main program function
+def manager():
+    file = "inventory.json"
+    #Title
+    print("============================")
+    print("INVENTORY MANAGEMENT SYSTEM")
+    print("============================\n")
+    # Load inventory from file
+    inventory = load_inventory(file)
+    #User menu options
+    menu = {
+        "Display All Products": lambda: display_all(inventory),
+        "Add New Product": lambda: print("Not implemented yet."),
+        "Update Stock": lambda: print("Not implemented yet."),
+        "Search Product": lambda: print("Not implemented yet."),
+        "Save Inventory": lambda: save_inventory(file, inventory),
+        "Exit": None
+    }
+    #Menu
+    while True:
+        option = menu_page(menu)
+        if option == "Exit":
+            save_inventory(file, inventory)
+            print("\nThank you for using the Inventory Management System.")
+            print("Program terminated.")
+            return
+        menu[option]()
+    
 #Run main program
-#auditor()
+manager()
