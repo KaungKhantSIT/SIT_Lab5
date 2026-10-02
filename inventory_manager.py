@@ -1,26 +1,23 @@
 import json
 
-#Input prompt, input validation, and return valid integer/"quit" signal
-def get_valid_input():
-    order = ""
-    product = input("Enter product name (or type 'quit' to exit):").title()
-    if product.lower() == "quit":
-        return "quit"
-    elif not product.isalpha():
-        print("Please enter a valid product name.")
-        return None
-    qty = input("Enter stock quantity (or type 'quit' to exit): ")
-    if qty.lower() == "quit":
-        return "quit"
+#Check if quantity is a valid positive integer
+def validate_qty(qty):
     try:
         qty = int(qty)
         if qty < 0:
             print("Please enter a positive number.")
-            return None
-        return product, qty
+            return False
+        return True
     except ValueError:
         print("Please enter a valid number.")
-        return None
+        return False
+
+#Check if entered ID is valid
+def validate_id(ID):
+    if not ID.startswith("P") or not ID[1:].isdigit():
+        print("Please enter a valid product ID.")
+        return False
+    return True
 
 #Load inventory from json file
 def load_inventory(filename):
@@ -47,20 +44,59 @@ def display_all(inventory):
     print("-------------------------------------------")
     for order in inventory:
         print(f"ID:{order['ID']}|Name:{order['Name']}|Price:${order['Price']:.2f}|Stock:{order['Stock']}")
-    print("-------------------------------------------\n")
+    print("-------------------------------------------")
 
-#Add new product to inventory
-def add_product(cart, order):
-    print(f"\nNew Product Added:\n{order}\n")
-    cart.append(order)
-    return cart
-
-#Search for product in inventory
-def search_product(inventory, product):
+#Lookup product by ID or name
+def lookup_product(inventory, search):
     for order in inventory:
-        if order['Name'].lower() == product.lower():
+        if order['ID'] == search or order['Name'].lower() == search.lower():
             return order
     return None
+
+#Add new product to inventory
+def add_product(inventory):
+    print("\nAdd New Product")
+    product = {}
+    while True:
+        product['ID'] = input("Product ID: ").strip().title()
+        #ID Validation
+        if validate_id(product['ID']):
+            #Check if product ID already exists
+            if lookup_product(inventory, product['ID']):
+                print("Product ID already exists. Please enter a unique ID.")
+            else:
+                break
+    while True:
+        product['Name'] = input("Product Name: ").strip().title()
+        #Check if product name already exists
+        if lookup_product(inventory, product['Name']):
+            print("Product name already exists. Please enter a unique name.")
+        else:
+            break
+    product['Price'] = float(input("Price($): ").strip())
+    while True:
+        product['Stock'] = input("Stock Quantity: ").strip()
+        if validate_qty(product['Stock']):
+            product['Stock'] = int(product['Stock'])
+            break
+    inventory.append(product)
+    return inventory
+
+#Search and display product in inventory
+def search_product(inventory):
+    print("Search Product")
+    while True:
+        id = input("Enter Product ID: ").strip().title()
+        if validate_id(id):
+            break
+    product = lookup_product(inventory, id)
+    if product is None:
+        print("\nProduct Not Found")
+    else:
+        print("\nProduct Found")
+        print("-------------------------------------------")
+        print(f"ID:{product['ID']}\nName:{product['Name']}\nPrice:${product['Price']}\nStock:{product['Stock']}")
+        print("-------------------------------------------")
 
 #Alert if total stock exceeds 500 units
 def inventory_cap(inventory, product, qty, cap=500):
@@ -91,9 +127,9 @@ def manager():
     #User menu options
     menu = {
         "Display All Products": lambda: display_all(inventory),
-        "Add New Product": lambda: print("Not implemented yet."),
+        "Add New Product": lambda: add_product(inventory),
         "Update Stock": lambda: print("Not implemented yet."),
-        "Search Product": lambda: print("Not implemented yet."),
+        "Search Product": lambda: search_product(inventory),
         "Save Inventory": lambda: save_inventory(file, inventory),
         "Exit": None
     }
@@ -106,6 +142,7 @@ def manager():
             print("Program terminated.")
             return
         menu[option]()
+        input("\nPress Enter to return to the menu...")
     
 #Run main program
 manager()
