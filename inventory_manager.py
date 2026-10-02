@@ -1,23 +1,41 @@
 import json
+import re
 
-#Check if quantity is a valid positive integer
-def validate_qty(qty):
+#Convert text to a non-negative int
+def parse_qty(raw):
     try:
-        qty = int(qty)
-        if qty < 0:
-            print("Please enter a positive number.")
-            return False
-        return True
+        qty = int(raw)
     except ValueError:
-        print("Please enter a valid number.")
-        return False
+        raise ValueError("Please enter a valid number.")
+    if qty < 0:
+        raise ValueError("Please enter a non-negative number.")
+    return qty
 
-#Check if entered ID is valid
-def validate_id(ID):
-    if not ID.startswith("P") or not ID[1:].isdigit():
-        print("Please enter a valid product ID.")
-        return False
-    return True
+#Convert text to a price above $0, rounded to 2 decimals
+def parse_price(raw):
+    try:
+        price = round(float(raw), 2)
+    except ValueError:
+        raise ValueError("Please enter a valid number.")
+    if price <= 0:
+        raise ValueError("Please enter a price above $0.")
+    return price
+
+#Check product ID format
+def parse_id(raw,format=re.compile(r"P[0-9]{3,}")):
+    pid = raw.upper()
+    if not format.fullmatch(pid):
+        raise ValueError("Please enter a valid product ID (e.g. P001).")
+    return pid
+
+#Prompt until input is validated using required parse function
+def prompt_until_valid(prompt, parse):
+    while True:
+        raw = input(prompt).strip()
+        try:
+            return parse(raw)
+        except ValueError as err:
+            print(err)
 
 #Load inventory from json file
 def load_inventory(filename):
@@ -27,7 +45,7 @@ def load_inventory(filename):
         print(f"{filename} found.")
         print("Inventory loaded successfully.\n")
     #Empty list if file not found
-    except FileNotFoundError:
+    except FileNotFoundError or json.JSONDecodeError:
         inv = []
     return inv
 
@@ -46,79 +64,67 @@ def display_all(inventory):
         print(f"ID:{order['ID']}|Name:{order['Name']}|Price:${order['Price']:.2f}|Stock:{order['Stock']}")
     print("-------------------------------------------")
 
-#Lookup product by ID or name
-def lookup_product(inventory, search):
-    for order in inventory:
-        if order['ID'] == search or order['Name'].lower() == search.lower():
-            return order
-    return None
+#Lookup product by ID
+def find_by_id(inventory, pid):
+    return next((p for p in inventory if p["ID"] == pid), None)
+ 
+#Lookup product by Name
+def find_by_name(inventory, name):
+    return next((p for p in inventory if p["Name"].lower() == name.lower()), None)
 
 #Add new product to inventory
 def add_product(inventory):
     print("\nAdd New Product")
-    product = {}
+    #Prompt for Product ID
     while True:
-        product['ID'] = input("Product ID: ").strip().title()
-        #ID Validation
-        if validate_id(product['ID']):
-            #Check if product ID already exists
-            if lookup_product(inventory, product['ID']):
-                print("Product ID already exists. Please enter a unique ID.")
-            else:
-                break
+        pid = prompt_until_valid("Product ID: ", parse_id)
+        #Check if ID already exists
+        if find_by_id(inventory, pid):
+            print("Product ID already exists. Please enter a unique ID.")
+        else:
+            break
+    #Prompt for Product Name
     while True:
-        product['Name'] = input("Product Name: ").strip().title()
+        name = input("Product Name: ").strip()
+        #Check that name is not empty
+        if not name:
+            print("Name cannot be empty.")
         #Check if product name already exists
-        if lookup_product(inventory, product['Name']):
+        elif find_by_name(inventory, name):
             print("Product name already exists. Please enter a unique name.")
         else:
             break
-    while True:
-        try:
-            product['Price'] = round(float(input("Price($): ").strip()),2)
-            if product['Price'] > 0:
-                break
-            else:
-                print("Please enter a price above $0")
-        except ValueError:
-            print("Please enter a valid number.")
-    while True:
-        product['Stock'] = input("Stock Quantity: ").strip()
-        if validate_qty(product['Stock']):
-            product['Stock'] = int(product['Stock'])
-            break
+    #Prompt for Price & Stock
+    price = prompt_until_valid("Price($): ", parse_price)
+    stock = prompt_until_valid("Stock Quantity: ", parse_qty)
+    #Create and add product to inventory
+    product = {
+        "ID": pid,
+        "Name": name,
+        "Price": price,
+        "Stock": stock
+    }
     inventory.append(product)
     print("\nProduct added successfully!")
-    return inventory
 
 #Update stock of product
 def update_stock(inventory):
-    while True:
-        id = input("Enter Product ID: ").strip().title()
-        if validate_id(id):
-            break
-    product = lookup_product(inventory, id)
+    pid = prompt_until_valid("Enter Product ID: ", parse_id)
+    product = find_by_id(inventory, pid)
+    #Check if product exists
     if product is None:
         print("\nProduct Not Found")
         return
-    else:
-        print("Product Found:")
-        print(f"Name:{product['Name']}\nCurrent Stock:{product['Stock']}\n")
-        while True:
-            new_stock = input("New Stock Quantity: ").strip()
-            if validate_qty(new_stock):
-                product['Stock'] = int(new_stock)
-                break
-        print("\nStock updated successfully!")
+    #Update Stock
+    print(f"Product Found:\nName: {product['Name']}\nCurrent Stock: {product['Stock']}\n")
+    product["Stock"] = prompt_until_valid("New Stock Quantity: ", parse_qty)
+    print("\nStock updated successfully!")
 
 #Search and display product in inventory
 def search_product(inventory):
     print("Search Product")
-    while True:
-        id = input("Enter Product ID: ").strip().title()
-        if validate_id(id):
-            break
-    product = lookup_product(inventory, id)
+    pid = prompt_until_valid("Enter Product ID: ", parse_id)
+    product = find_by_id(inventory, pid)
     if product is None:
         print("\nProduct Not Found")
     else:
@@ -174,4 +180,5 @@ def manager():
         input("\nPress Enter to return to the menu...")
     
 #Run main program
-manager()
+if __name__ == "__main__":
+    manager()
