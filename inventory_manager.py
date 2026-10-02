@@ -88,7 +88,28 @@ def add_product(inventory):
             product['Stock'] = int(product['Stock'])
             break
     inventory.append(product)
+    print("\nProduct added successfully!")
     return inventory
+
+#Update stock of product
+def update_stock(inventory):
+    while True:
+        id = input("Enter Product ID: ").strip().title()
+        if validate_id(id):
+            break
+    product = lookup_product(inventory, id)
+    if product is None:
+        print("\nProduct Not Found")
+        return
+    else:
+        print("Product Found:")
+        print(f"Name:{product['Name']}\nCurrent Stock:{product['Stock']}\n")
+        while True:
+            new_stock = input("New Stock Quantity: ").strip()
+            if validate_qty(new_stock):
+                product['Stock'] = int(new_stock)
+                break
+        print("\nStock updated successfully!")
 
 #Search and display product in inventory
 def search_product(inventory):
@@ -136,7 +157,7 @@ def manager():
     menu = {
         "Display All Products": lambda: display_all(inventory),
         "Add New Product": lambda: add_product(inventory),
-        "Update Stock": lambda: print("Not implemented yet."),
+        "Update Stock": lambda: update_stock(inventory),
         "Search Product": lambda: search_product(inventory),
         "Save Inventory": lambda: save_inventory(file, inventory),
         "Exit": None
